@@ -31,7 +31,9 @@ APK
    - [x] Android SDK/NDK, `cargo ndk`
    - [x] Oyun kütüphanesi `aarch64-linux-android` için derleniyor (clipboard, DualSense, klavye düzeni düzeltmeleri)
    - [x] `crates/horizon-android`: `android_main`, winit'in Android olay döngüsü, argüman dosyası
-   - [ ] `libhorizon.so` linkleniyor; APK paketleme (Gradle/AndroidManifest), ilk açılış bir cihazda/emülatörde
+   - [x] `libhorizon.so` linkleniyor (arm64, yalnızca sistem kütüphaneleri: libandroid, libaaudio, liblog)
+   - [x] APK paketleme, Gradle'sız: `packaging/android/build_apk.sh` (aapt2, zipalign, apksigner)
+   - [ ] İlk açılış bir cihazda (bu ortamda emülatör yok)
    - [ ] Dosya yolları, ses (AAudio), yüzey kaybı (uygulama arka plana gidince), ekran klavyesi
 2. **Dokunmatik kontroller oyuna bağlanır**
    - [ ] Dokunma olayları → `TouchControls::update`, `poll_state` → oyunun kontrolcü girişi
