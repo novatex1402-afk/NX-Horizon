@@ -1,0 +1,58 @@
+# NX-Horizon's APK (docs/android-port-plan.md): built on every push to a claude/ or android
+# branch and on demand, signed with the repository's release key so each build installs over
+# the last one. The key lives in three Actions secrets: ANDROID_KEYSTORE_BASE64 (the .jks,
+# base64), ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS. Without them the APK is signed
+# with a throwaway debug key and cannot update an installed one.
+name: Android APK
+
+on:
+  push:
+    branches: ["claude/**", "android/**", main]
+  workflow_dispatch:
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust targets and cargo-ndk
+        run: |
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --locked
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-arm64
+      - name: Android platform
+        # The NDK the port is built with locally (r28c), not whichever the runner image has.
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" > /dev/null || true
+          test -d "$ANDROID_HOME/ndk/28.2.13676358"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - name: Release key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: this APK is signed with a debug key and will not install over an earlier one."
+          fi
+      - name: Build the APK
+        env:
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 0.1.${{ github.run_number }}
+        run: packaging/android/build_apk.sh --abi arm64-v8a --out "$RUNNER_TEMP/apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nx-horizon-arm64-v8a-${{ github.run_number }}
+          path: ${{ runner.temp }}/apk/*.apk
+          if-no-files-found: error
