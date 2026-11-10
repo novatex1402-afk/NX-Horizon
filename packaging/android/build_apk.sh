@@ -5,7 +5,8 @@
 #   packaging/android/build_apk.sh [--abi arm64-v8a|x86_64]... [--profile release|fast] [--out DIR]
 #
 # Signs with a debug key (created once in ~/.android/debug.keystore) unless KEYSTORE,
-# KEYSTORE_PASS and KEY_ALIAS name a release key.
+# KEYSTORE_PASS and KEY_ALIAS name a release key. An update installs over the app only when
+# it is signed with the same key and its VERSION_CODE (default 1) is not lower.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -43,8 +44,11 @@ cp "$icons/256x256/apps/horizon.png" "$work/res/mipmap-xxxhdpi/icon.png"
 cp "$icons/128x128/apps/horizon.png" "$work/res/mipmap-xxhdpi/icon.png"
 cp "$icons/128x128/apps/horizon.png" "$work/res/mipmap-xhdpi/icon.png"
 "$tools/aapt2" compile --dir "$work/res" -o "$work/res.zip"
+version_args=(--version-code "${VERSION_CODE:-1}")
+[ -n "${VERSION_NAME:-}" ] && version_args+=(--version-name "$VERSION_NAME")
 "$tools/aapt2" link -o "$work/unaligned.apk" -I "$platform" \
-    --manifest "$here/AndroidManifest.xml" "$work/res.zip" --auto-add-overlay
+    --manifest "$here/AndroidManifest.xml" "$work/res.zip" --auto-add-overlay \
+    --replace-version "${version_args[@]}"
 
 # 3. The libraries, stored uncompressed so Android maps them straight from the APK.
 (cd "$work/apk" && zip -q -0 -r "$work/unaligned.apk" lib)
