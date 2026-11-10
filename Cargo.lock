@@ -1379,6 +1379,15 @@ name = "horizon-addresses"
 version = "0.1.0"
 
 [[package]]
+name = "horizon-android"
+version = "0.1.0"
+dependencies = [
+ "horizon-game",
+ "horizon-official",
+ "log",
+]
+
+[[package]]
 name = "horizon-anticheat"
 version = "0.1.0"
 dependencies = [

@@ -143,7 +143,10 @@ mod enderman_placement_tests;
 mod entity;
 mod entity_culling;
 mod entity_sounds;
-mod event_loop;
+pub(crate) mod event_loop;
+/// The Android activity the game runs in.
+#[cfg(target_os = "android")]
+pub mod android;
 mod events;
 mod execution_role;
 mod explosion;
@@ -614,7 +617,7 @@ use winit::{
     application::ApplicationHandler,
     error::EventLoopError,
     event::{DeviceEvent, DeviceId, ElementState, MouseButton, MouseScrollDelta, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::{KeyCode, PhysicalKey},
     window::{CursorGrabMode, Window, WindowId},
 };

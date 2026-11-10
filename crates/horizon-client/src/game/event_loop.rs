@@ -6,7 +6,23 @@
 //! methods this trait instead. winit's loop implements it, so a window's game is unchanged.
 
 use std::time::{Duration, Instant};
-use winit::event_loop::{ActiveEventLoop, ControlFlow};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+
+/// The process's event loop. On Android it is bound to the activity the game runs in
+/// ([`crate::game::android::app`]); everywhere else winit's default.
+pub(crate) fn new_event_loop() -> Result<EventLoop<()>, winit::error::EventLoopError> {
+    #[cfg(target_os = "android")]
+    {
+        use winit::platform::android::EventLoopBuilderExtAndroid;
+        let mut builder = EventLoop::builder();
+        if let Some(app) = super::android::app() {
+            builder.with_android_app(app);
+        }
+        builder.build()
+    }
+    #[cfg(not(target_os = "android"))]
+    EventLoop::new()
+}
 
 /// A successful frame only permits polling until the next idle iteration. If
 /// the compositor stops delivering redraws, the old result must not keep the

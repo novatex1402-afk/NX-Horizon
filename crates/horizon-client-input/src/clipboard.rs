@@ -123,6 +123,7 @@ pub trait Clipboard {
 /// data-control protocol and falls back to X11 (XWayland) on compositors
 /// without it. When no system clipboard can be reached, text copied in the
 /// game can still be pasted in the game.
+#[cfg(not(target_os = "android"))]
 #[derive(Default)]
 pub struct SystemClipboard {
     system: Option<arboard::Clipboard>,
@@ -130,6 +131,7 @@ pub struct SystemClipboard {
     copied: Option<String>,
 }
 
+#[cfg(not(target_os = "android"))]
 impl SystemClipboard {
     /// The text last copied by the game.
     pub fn copied(&self) -> Option<&str> {
@@ -143,6 +145,7 @@ impl SystemClipboard {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl Clipboard for SystemClipboard {
     fn get(&mut self) -> String {
         let Some(system) = self.system() else {
@@ -167,6 +170,60 @@ impl Clipboard for SystemClipboard {
             && system.set_text(text.to_owned()).is_err()
         {
             self.system = None;
+        }
+    }
+}
+
+/// Android's system clipboard, reached through the functions the Android runtime
+/// registers with [`set_android_clipboard`] (its `ClipboardManager`, over JNI).
+/// Until it does, text copied in the game can still be pasted in the game.
+#[cfg(target_os = "android")]
+#[derive(Default)]
+pub struct SystemClipboard {
+    /// The text Horizon last copied (`horizon-ctl status`).
+    copied: Option<String>,
+}
+
+/// The Android clipboard's reader and writer.
+#[cfg(target_os = "android")]
+pub struct AndroidClipboard {
+    /// The clipboard's text, `None` when it holds none.
+    pub get: fn() -> Option<String>,
+    pub set: fn(&str),
+}
+
+#[cfg(target_os = "android")]
+static ANDROID_CLIPBOARD: std::sync::OnceLock<AndroidClipboard> = std::sync::OnceLock::new();
+
+/// Plugs the Android clipboard in; the first registration wins.
+#[cfg(target_os = "android")]
+pub fn set_android_clipboard(backend: AndroidClipboard) {
+    let _ = ANDROID_CLIPBOARD.set(backend);
+}
+
+#[cfg(target_os = "android")]
+impl SystemClipboard {
+    /// The text last copied by the game.
+    pub fn copied(&self) -> Option<&str> {
+        self.copied.as_deref()
+    }
+}
+
+#[cfg(target_os = "android")]
+impl Clipboard for SystemClipboard {
+    fn get(&mut self) -> String {
+        match ANDROID_CLIPBOARD.get() {
+            Some(backend) => (backend.get)().unwrap_or_default(),
+            None => self.copied.clone().unwrap_or_default(),
+        }
+    }
+    fn set(&mut self, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        self.copied = Some(text.to_owned());
+        if let Some(backend) = ANDROID_CLIPBOARD.get() {
+            (backend.set)(text);
         }
     }
 }

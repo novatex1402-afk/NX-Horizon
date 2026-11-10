@@ -84,6 +84,10 @@ unicode-bidi = "0.3.18"
 # `LevelStorageAccess.estimateDiskSpace`: usable disk space, without unsafe code on Windows.
 fs4 = { version = "1.1.0", default-features = false, features = ["sync"] }
 
+# Android: winit drives a NativeActivity, whose events the touch controls read.
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { version = "0.30.13", features = ["android-native-activity"] }
+
 [target.'cfg(unix)'.dependencies]
 # The server thread's CPU time per tick (`HORIZON_SPIKES`, spans.rs).
 rustix = { version = "1", default-features = false, features = ["std", "time", "process", "fs"] }

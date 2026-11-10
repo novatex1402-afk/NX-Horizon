@@ -33,3 +33,16 @@ pub const MOD_API_LEVEL: [u8; horizon_mods::api_level::MARK.len()] = horizon_mod
 pub fn main() {
     horizon_client::entry::main();
 }
+
+/// Android: runs the game in `app`, the activity the APK's native library was started in,
+/// with `args` as its command line (Android has none). Register hooks first, as for [`main`].
+#[cfg(target_os = "android")]
+pub fn main_android(app: AndroidApp, args: Vec<String>) {
+    horizon_client::game::android::set_app(app);
+    horizon_client::entry::set_args(args);
+    horizon_client::entry::main();
+}
+
+/// The activity handle [`main_android`] takes (android-activity's, as winit re-exports it).
+#[cfg(target_os = "android")]
+pub use horizon_client::game::android::AndroidApp;
